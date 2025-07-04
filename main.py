@@ -8,6 +8,8 @@ app = FastAPI()
 
 #get 요청은 url에 데이터를 담아서 보내야함
 
+#http://localhost:8000/docs 는 확인 사이트
+
 @app.get("/")
 def read_root():
     return {"message": "Hello, World!"}
@@ -44,12 +46,21 @@ class User(BaseModel):
     age: int = Field(..., title="사용자 나이", description="사용자의 나이를 입력하세요", ge=0, le=120)  #ge는 greater than equal, le는 less than equal
 #post 요청은 body에 데이터를 담아서 보내야함
 
+#임시 저장 리스트
+user_list = []
+
 @app.post("/user")
 def create_user(user:User):
+    user_list.append(user) #user_list에 user 객체를 추가
     return {
         "message": f"사용자 {user.name}이(가) 생성되었습니다.", 
         "age": user.age
         }
+
+#사용자 전체 조회
+@app.get("/users")
+def read_users():
+    return user_list
 
 
 class Student(BaseModel):  #class 선언 필수
@@ -57,17 +68,26 @@ class Student(BaseModel):  #class 선언 필수
     #level: int
     #cn:int#
 
+
+
     name: str = Field(..., min_length=2, max_length=10) 
     level: int = Field(..., ge=1, le=10) 
     cn: int = Field(..., ge=1, le=10) 
-     
+
+student_list = []
+
 @app.post("/Student")
 def create_student(student: Student):
+    student_list.append(student)  #student_list에 student 객체를 추가
     return {
         "message": f"사용자 {student.name}이(가) 생성되었습니다.", 
         "level": student.level,
         "cn": student.cn
         }
+
+@app.get("/students")
+def read_students():
+    return student_list
 
 #mkdir = 폴더 만들기 명령어
 #cd는 그 폴더에 널기
