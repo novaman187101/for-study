@@ -1,7 +1,10 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 app = FastAPI()
+
+# FastAPT
+# uvicorn main:app --reload 
 
 #get 요청은 url에 데이터를 담아서 보내야함
 
@@ -34,9 +37,11 @@ def read_info(name: str = "총통", city: str = "베를린"):
 #class 객체
 
 class User(BaseModel):
-    name: str
-    age: int
+    #name: str
+    #ge: int
 
+    name : str = Field(...,min_length=2, max_length=10)  #Field는 변수에 대한 추가 정보를 제공
+    age: int = Field(..., title="사용자 나이", description="사용자의 나이를 입력하세요", ge=0, le=120)  #ge는 greater than equal, le는 less than equal
 #post 요청은 body에 데이터를 담아서 보내야함
 
 @app.post("/user")
@@ -48,10 +53,14 @@ def create_user(user:User):
 
 
 class Student(BaseModel):  #class 선언 필수
-    name: str   #각 변수 입력 규칙
-    level: int
-    cn:int 
+    #name: str   #각 변수 입력 규칙
+    #level: int
+    #cn:int#
 
+    name: str = Field(..., min_length=2, max_length=10) 
+    level: int = Field(..., ge=1, le=10) 
+    cn: int = Field(..., ge=1, le=10) 
+     
 @app.post("/Student")
 def create_student(student: Student):
     return {
@@ -62,3 +71,16 @@ def create_student(student: Student):
 
 #mkdir = 폴더 만들기 명령어
 #cd는 그 폴더에 널기
+
+
+class Memo(BaseModel):
+    title: str
+    line: str
+
+@app.post("/memo")
+def create_memo(memo: Memo):
+    return {
+        "message": f"메모 제목: {memo.title}, 내용: {memo.line}이(가) 생성되었습니다."
+    }
+
+
