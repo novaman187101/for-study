@@ -1,14 +1,17 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from typing import List
+from supabase import create_client, Client
 
 app = FastAPI()
 
-# FastAPT
-# uvicorn main:app --reload 
+SUPABASE_URL = "https://ubbqlekazairbmqwcffl.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InViYnFsZWthemFpcmJtcXdjZmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMjU1NDEsImV4cCI6MjA2NzYwMTU0MX0.S3YQYH2WhfB6LN0YmCLNpoCK7g1IZuCVVAd-q70lrSs"
 
-#get 요청은 url에 데이터를 담아서 보내야함
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-#http://localhost:8000/docs 는 확인 사이트
+# FastAPI 서버 실행 명령어
+# uvicorn main:app --reload   
 
 @app.get("/")
 def read_root():
@@ -19,64 +22,57 @@ def read_hello():
     print("Hello endpoint was called")
     return {"message": "Hello, FastAPI!"}
 
-#http://127.0.0.1:8000/hello/panzer
+# http://127.0.0.1:8000/hello/디디
 @app.get("/hello/{name}")
 def read_hello_name(name: str):
     print(name)
     return {"message": f"안녕하세요, {name}님!"}
 
-
+# http://127.0.0.1:8000/greet?name=디디디디디&age=20
 @app.get("/greet")
-def read_greet(name: str = "방문자"):
+def read_greet(name: str = "방문자", age: int = 0):
     return {"message": f"안녕하세요, {name}님!"}
 
-#http://127.0.0.1:8000/info?mane=총통&city=베를린
 @app.get("/info")
-def read_info(name: str = "총통", city: str = "베를린"):
-    return {"message":f"{name}님, {city}에 오신것을 환영합니다"} #f는 format 함수
+def read_info(name: str, city: str):
+    return {"message": f"{name}님, {city}에 오신 것을 환영합니다!"}
 
-
-#class 객체
 
 class User(BaseModel):
-    #name: str
-    #ge: int
+    # name: str
+    # age: int
+    name: str = Field(..., min_length=2, max_length=10)
+    age: int = Field(..., ge=0, le=120)  # 0 이상 120 이하
 
-    name : str = Field(...,min_length=2, max_length=10)  #Field는 변수에 대한 추가 정보를 제공
-    age: int = Field(..., title="사용자 나이", description="사용자의 나이를 입력하세요", ge=0, le=120)  #ge는 greater than equal, le는 less than equal
-#post 요청은 body에 데이터를 담아서 보내야함
-
-#임시 저장 리스트
 user_list = []
 user_id_counter = 1
 
-
 @app.post("/user")
-def create_user(user:User):
-    global user_id_counter  #전역 변수로 선언
+def create_user(user: User):
+    global user_id_counter
     new_user = user.dict()
-    new_user["id"] = user_id_counter  #user 객체에 id 추가
-    user_list.append(new_user) #user_list에 new_user 객체를 추가
-    user_id_counter += 1  #id 카운터 증가
+    new_user['id'] = user_id_counter
+    user_list.append(new_user)
+    user_id_counter += 1
     return {
-        "id" : new_user["id"],  #새로운 사용자 id
-        "message": f"사용자 {user.name}이(가) 생성되었습니다.", 
+        "message": f"사용자 {user.name}이(가) 생성되었습니다.",
+        "id": new_user['id'],
         "age": user.age
-        }
+    }
 
-#사용자 전체 조회
+# 사용자 전체 조회 (GET)
 @app.get("/users")
-def read_users():
+def get_users():
     return user_list
 
-#특정 사용자 조회
+
+# 특정 사용자 조회
 @app.get("/user/{user_id}")
 def get_user(user_id: int):
     for user in user_list:
         if user["id"] == user_id:
             return user
-    return HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-
+    raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
 @app.put("/user/{user_id}")
 def update_user(user_id: int, updated_user: User):
@@ -85,116 +81,87 @@ def update_user(user_id: int, updated_user: User):
             user["name"] = updated_user.name
             user["age"] = updated_user.age
             return {
-                "message": f"사용자 {user_id}이(가) 업데이트되었습니다.",
-                "user": user
+                "message": f"{user['name']}님의 정보가 업데이트되었습니다.",
+                "id": user["id"],
+                "age": user["age"]
             }
-    return HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+    raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
-
-
-#특정 사용자 삭제
+# 특정 사용자 삭제
 @app.delete("/user/{user_id}")
 def delete_user(user_id: int):
     for idx, user in enumerate(user_list):
         if user["id"] == user_id:
-            user_list.pop((idx))
-            return {"message": f"사용자 {user_id}이(가) 삭제되었습니다."}
-    return HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+            user_list.pop(idx)
+            return {"message": f"{user['name']}님이 삭제되었습니다."}
+    raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
 
+class Student(BaseModel):
+    name: str = Field(..., min_length=2, max_length=20)
+    grade: int = Field(..., ge=1, le=3)
+    classroom: int = Field(..., ge=1, le=10)
 
-
-
-
-
-
-
-
-class Student(BaseModel):  #class 선언 필수
-    #name: str   #각 변수 입력 규칙
-    #level: int
-    #cn:int#
-
-
-
-
-
-    name: str = Field(..., min_length=2, max_length=10) 
-    level: int = Field(..., ge=1, le=10) 
-    cn: int = Field(..., ge=1, le=10) 
-    id: int
-
-student_list = []
-student_id_counter = 1  #학생 id 카운터
-
-@app.post("/Student")
-def create_student(student: Student):
-    global student_id_counter  #전역 변수로 선언
-    new_student = student.dict()
-    new_student["id"] = student_id_counter
-    student_list.append(student)  #student_list에 student 객체를 추가
-    student_id_counter += 1  #id 카운터 증가
+@app.post("/student")
+def register_student(student: Student):
     return {
-        "message": f"사용자 {student.name}이(가) 생성되었습니다.", 
-        "level": student.level,
-        "cn": student.cnS
-        }
-
-
-@app.get("/students")
-def read_students():
-    return student_list
-
-#특정 사용자 조회
-@app.get("/student/{student_id}")
-def get_student(student_id: int):
-    for student in student_list:
-        if student["name"] == student_id:
-            return student
-    return HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-
-#특정 사용자 삭제
-@app.delete("student/{student_id}")
-def delete_student(student_id: int):
-    for idx, student in enumerate(student_list):
-        if student["name"] == student_id:
-            student_list.pop((idx))
-            return {"message": f"사용자 {student_id}이(가) 삭제되었습니다."}
-    return HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-
-#mkdir = 폴더 만들기 명령어
-#cd는 그 폴더에 널기
-
-
-class Memo(BaseModel):
-    title: str
-    line: str
-
-@app.post("/memo")
-def create_memo(memo: Memo):
-    return {
-        "message": f"메모 제목: {memo.title}, 내용: {memo.line}이(가) 생성되었습니다."
+        "message": f"{student.grade}학년 {student.classroom}반 {student.name} 학생이 등록되었습니다."
     }
-
-
-
-@app.get("/todos")
-def get_todos():
-    return todo_list
-
-
-todo_list = []
-
-
 
 class Todo(BaseModel):
-    title: str
-    contents: str 
+    title: str = Field(..., min_length=1, max_length=100)
+    done: bool = False
 
-@app.post("/todo")
+todos: List[dict] = []
+todo_id_counter = 1
+
+# 할 일 등록
+@app.post("/todos")
 def create_todo(todo: Todo):
-    todo_list.append(todo)
-    return{
-        "할일" : f"제목: {todo.title}, 내용: {todo.contents}."
+    print("할 일 등록 요청:", todo)
+    result = supabase.table("todos").insert(todo.dict()).execute()
+    print("supabse 할 일 등록 요청:", result)
 
-    }
+    return result.data[0]
+
+# 전체 할 일 조회
+@app.get("/todos")
+def get_todos():
+    return todos
+
+# 완료된 할 일 조회
+@app.get("/todos/complete")
+def get_todos_complte(done: bool):
+    list = []
+    for t in todos:
+        if t["done"] == done:
+            list.append(t)
+
+    return list
+
+# 특정 할 일 조회
+@app.get("/todos/{todo_id}")
+def get_todo(todo_id: int):
+    for t in todos:
+        if t["id"] == todo_id:
+            return t
+    raise HTTPException(status_code=404, detail="할 일을 찾을 수 없습니다.")
+
+# 할 일 수정
+@app.put("/todos/{todo_id}")
+def update_todo(todo_id: int, todo: Todo):
+    for t in todos:
+        if t["id"] == todo_id:
+            t["title"] = todo.title
+            t["done"] = todo.done
+            return {"message": f"{todo_id}번 할 일이 수정되었습니다."}
+    raise HTTPException(status_code=404, detail="할 일을 찾을 수 없습니다.")
+
+# 할 일 삭제
+@app.delete("/todos/{todo_id}")
+def delete_todo(todo_id: int):
+    for idx, t in enumerate(todos):
+        if t["id"] == todo_id:
+            todos.pop(idx)
+            return {"message": f"{todo_id}번 할 일이 삭제되었습니다."}
+    raise HTTPException(status_code=404, detail="할 일을 찾을 수 없습니다.")
