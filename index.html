@@ -1,0 +1,44 @@
+<DOCTYPE htmL>
+<html lang="ko">
+    <head>
+        <title>To_Do App</title>
+    <head>
+    <body>
+        <h1>TO_DO 관리 시스템</h1>
+        <div>
+            <input id = "todoInput" type="text" placeholder="할 일을 입력하세요">
+            <button onclick = "addTodo()">추가 </button>
+        </div>
+       
+        <ul id="todo-list">
+        
+        </ul>
+
+        <script>
+            const API_URL = "http://localhost:8000";
+
+            async function getTodos() {
+                const res = await fetch(`${API_URL}/todos`);
+                const todos = await res.json();
+                const list = document.getElementById("todo-list");
+                list.innerHTML = "";
+                todos.forEach(todo => {
+                    const li = document.createElement("li");
+                    li.innerHTML = `
+                    ${todo.done ? "✅" : "⬜"}
+                    <strong>${todo.title}</strong>
+                    <button onclick="toggleDone(${todo.id}, ${todo.done}, '${todo.title.replace(/'/g, "\\\\'")}')">✔️확인</button>
+                    <button onclick="editTodo(${todo.id}, '${todo.title.replace(/'/g, "\\\\'")}', ${todo.done})">✏️수정</button>
+                    <button onclick="deleteTodo(${todo.id})">🗑️삭제</button>
+                    `;
+                    list.appendChild(li);
+                });
+                }
+            function addTodo(){
+                alert("할 일이 추가되었습니다.");
+            }
+            getTodos();
+        </script>
+    <body>
+
+</html>

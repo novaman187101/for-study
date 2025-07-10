@@ -2,8 +2,16 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import List
 from supabase import create_client, Client
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 모든 도메인 허용
+    allow_credentials=True,
+    allow_methods=["*"],  # 모든 HTTP 메서드 허용
+    allow_headers=["*"],  # 모든 헤더 허용
+)
 
 SUPABASE_URL = "https://ubbqlekazairbmqwcffl.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InViYnFsZWthemFpcmJtcXdjZmZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMjU1NDEsImV4cCI6MjA2NzYwMTU0MX0.S3YQYH2WhfB6LN0YmCLNpoCK7g1IZuCVVAd-q70lrSs"
@@ -112,8 +120,6 @@ class Todo(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
     done: bool = False
 
-todos: List[dict] = []
-todo_id_counter = 1
 
 # 할 일 등록
 @app.post("/todos")
@@ -127,41 +133,41 @@ def create_todo(todo: Todo):
 # 전체 할 일 조회
 @app.get("/todos")
 def get_todos():
-    return todos
+    result = supabase.table("todos").select("*").order("id").execute()
+    return result.data
 
 # 완료된 할 일 조회
 @app.get("/todos/complete")
 def get_todos_complte(done: bool):
     list = []
-    for t in todos:
-        if t["done"] == done:
-            list.append(t)
+    # for t in todos:
+    #     if t["done"] == done:
+    #         list.append(t)
 
     return list
 
 # 특정 할 일 조회
 @app.get("/todos/{todo_id}")
 def get_todo(todo_id: int):
-    for t in todos:
-        if t["id"] == todo_id:
-            return t
-    raise HTTPException(status_code=404, detail="할 일을 찾을 수 없습니다.")
+    result = supabase.table("todos").select("*").eq("id", todo_id).single().execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="할 일을 찾을 수 없습니다.")
+    return result.data
 
 # 할 일 수정
 @app.put("/todos/{todo_id}")
 def update_todo(todo_id: int, todo: Todo):
-    for t in todos:
-        if t["id"] == todo_id:
-            t["title"] = todo.title
-            t["done"] = todo.done
-            return {"message": f"{todo_id}번 할 일이 수정되었습니다."}
-    raise HTTPException(status_code=404, detail="할 일을 찾을 수 없습니다.")
+    result = supabase.table("todos").select("*").eq("id", todo_id).single().execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="할 일을 찾을 수 없습니다.")
+    return result.data
+
 
 # 할 일 삭제
 @app.delete("/todos/{todo_id}")
 def delete_todo(todo_id: int):
-    for idx, t in enumerate(todos):
-        if t["id"] == todo_id:
-            todos.pop(idx)
-            return {"message": f"{todo_id}번 할 일이 삭제되었습니다."}
+   result = supabase.table("todos").delete().eq("id", todo_id).execute()
+   if not result.data:
     raise HTTPException(status_code=404, detail="할 일을 찾을 수 없습니다.")
+   return {"message": f"할 일 {todo_id}이(가) 삭제되었습니다."}
+   
